@@ -11,6 +11,7 @@ use Rex -base;
 use Rex::Apache::Deploy qw/Symlink/;
 use File::Spec;
 use Data::Dumper;
+use Application::Download;
 
 
 extends qw(Application::Instance);
@@ -64,7 +65,7 @@ override deploy_app => sub {
 
   generate_deploy_directory(sub { return $self->deploy_version });
 
-  deploy $tar_gz; 
+  deploy Application::Download::get($tar_gz); 
 
 };
 
