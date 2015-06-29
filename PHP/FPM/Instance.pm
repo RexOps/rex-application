@@ -12,6 +12,7 @@ use Rex::Apache::Deploy qw/Symlink/;
 use File::Spec;
 use Data::Dumper;
 use Application::Download;
+use Rex::Commands::Run;
 
 
 extends qw(Application::Instance);
@@ -72,6 +73,16 @@ override deploy_app => sub {
 override activate => sub {
   my ($self) = @_;
   run "ln -snf " . File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version, "public") . " " . $self->doc_root;
+  $self->restart();
+};
+
+
+override restart => sub {
+  my ($self, $param) = @_;
+
+  sudo sub {
+    service $self->service_name => "restart";
+  };
 };
  
 sub purge_old_versions {
