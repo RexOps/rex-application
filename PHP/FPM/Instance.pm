@@ -71,13 +71,7 @@ override deploy_app => sub {
 
 override activate => sub {
   my ($self) = @_;
-
-  deploy_to(File::Spec->catdir($self->instance_path, "deploy"));
-  document_root(File::Spec->catdir($self->doc_root));
-
-  generate_deploy_directory(sub { return $self->deploy_version; });
-
-  switch_to_version $self->deploy_version; 
+  run "ln -snf " . File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version, "public") . " " . $self->doc_root;
 };
  
 sub purge_old_versions {
