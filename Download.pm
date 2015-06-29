@@ -10,6 +10,7 @@ use warnings;
 
 require Rex::Commands;
 use Rex::Commands::Download;
+use Rex::Commands::Fs;
 
 use File::Basename;
 
@@ -20,6 +21,8 @@ BEGIN {
 
 sub get {
   my ($url) = @_;
+
+  Rex::Logger::info("Check to download: $url");
 
   my $tmp_dir;
 
