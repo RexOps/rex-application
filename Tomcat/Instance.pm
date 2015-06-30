@@ -11,6 +11,7 @@ use common::sense;
 
 use File::Spec;
 use XML::Simple;
+use Time::Local;
 
 use Rex::Apache::Deploy qw/Tomcat7/;
 use Rex::Commands::File;
@@ -20,6 +21,8 @@ use Rex::Commands::Sync;
 use Rex::Commands::Service;
 use Rex::Commands::Process;
 use Rex::Commands::Tail;
+
+use Application::Download;
 
 require Rex::Commands;
 
@@ -56,6 +59,26 @@ has manager_password => (
     return $manager_pw->{password};
   },
 );
+
+has owner => (is => "ro", lazy => 1, default => sub { shift->detect_service_name });
+has group => (is => "ro", lazy => 1, default => sub { shift->detect_service_name });
+
+has port => (
+  is      => "ro",
+  lazy    => 1,
+  default => sub {
+    my ($self) = @_;
+    my @lines = split("\n", cat(File::Spec->catfile($self->instance_path, "conf", "wrapper.conf")));
+    my ($http_port_line) = grep { m/\-Dtomcat\.http\.port=/ } @lines;
+    my ($port) = ( $http_port_line =~ m/=(\d+)$/ );
+    return $port;
+  }
+);
+
+after start => sub {
+  my ($self) = @_;
+  $self->wait_for_start;
+};
 
 
 override deploy_lib => sub {
@@ -139,7 +162,7 @@ override deploy_app => sub {
     die "File $war not found.";
   }
 
-  deploy $war,
+  deploy Application::Download::get($war),
     username     => $self->manager_user,
     password     => $self->manager_password,
     port         => $self->port,
@@ -280,5 +303,53 @@ override kill => sub {
 
   Rex::Logger::info("Tomcat killed. Hammer was large enough :)");
 };
+
+
+sub wait_for_start {
+  my ($self) = @_;
+
+  # tail the logfile
+  eval {
+    my $log_file = File::Spec->catfile($self->instance_path, "logs", "wrapper.log");
+    tail $log_file, sub {
+      my ($data) = @_;
+
+      Rex::Logger::info($data);
+
+      if($data =~ m/Server startup in (\d+) ms/gms) {
+        # 2014/08/15 16:06:29
+        my ($log_time_year,
+            $log_time_month,
+            $log_time_day,
+            $log_time_hour,
+            $log_time_minute,
+            $log_time_second) = ($data =~ m/\| (\d+)\/(\d+)\/(\d+) (\d+):(\d+):(\d+) \|/);
+
+        my $current_time = time;
+        my $log_time = timelocal( $log_time_second, $log_time_minute, $log_time_hour, $log_time_day, $log_time_month-1, $log_time_year );
+        # wenn der log zeitstempel groesser ist wie die aktuelle Zeit - 60 sekunden
+        # dann ist der log eintrag aus dem aktuellen deployment
+
+        Rex::Logger::info("Comparing time: $log_time >= $current_time");
+
+        if( $log_time >= ($current_time - 60) ) {
+          die "server startup done";
+        }
+      }
+    };
+    1;
+  } or do {
+    my $e = $@;
+    if($e =~ m/server startup done/) {
+      Rex::Logger::info("Server successfully started.");
+    }
+    else {
+      Rex::Logger::info("Error: $e", "error");
+      die "Error starting server: $e";
+    }
+  };
+
+}
+
 
 1;
