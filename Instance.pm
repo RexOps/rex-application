@@ -82,7 +82,7 @@ sub configure_app {
   my ($self, $configuration_source, $configuration_dest, $params) = @_;
 
   if(ref $configuration_source eq "CODE") {
-    return $configuration_source->();
+    return $configuration_source->($self);
   }
 
   my $conf_dest = $self->configuration_path;
