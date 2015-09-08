@@ -61,6 +61,10 @@ override deploy_app => sub {
 
   my ($self, $tar_gz, $context) = @_;
 
+  if (!can_run "unzip") {
+    die('unzip command not found.');
+  }
+
   deploy_to(File::Spec->catdir($self->instance_path, "deploy"));
   document_root($self->doc_root);
 
