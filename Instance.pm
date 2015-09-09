@@ -338,6 +338,9 @@ sub wait_for_start {
 
 sub _comp {
   my ($self, $other) = @_;
+
+  if(! ref $other) { return 0; }
+
   return ($self->instance_path eq $other->instance_path); 
 }
 
