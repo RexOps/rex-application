@@ -17,6 +17,10 @@ require Rex::Commands;
 use Artifactory;
 use Array::Diff;
 
+use overload
+  '==' => sub { shift->_comp(@_) },
+  'eq' => sub { shift->_comp(@_) };
+
 BEGIN {
   use Rex::Shared::Var;
   share qw($cfg_download_count $cfg_dir);
@@ -329,6 +333,11 @@ sub wait_for_start {
 #    }
 #  };
 
+}
+
+sub _comp {
+  my ($self, $other) = @_;
+  return ($self->instance_path eq $other->instance_path); 
 }
 
 

@@ -44,8 +44,13 @@ sub get_instances {
 sub switch {
   my ($self) = @_;
 
-  my $inactive = $self->get_inactive;
+  my $inactive = $self->get_deployable_instance; # this is the inactive one
   my $active = $self->get_active;
+
+  if($inactive == $active) {
+    Rex::Logger::info("Instance already active.");
+    return;
+  }
 
   sudo sub {
     $inactive->activate;
