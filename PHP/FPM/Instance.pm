@@ -58,7 +58,7 @@ override detect_service_name => sub {
 };
 
 override deploy_app => sub {
-
+print "HIER!!\n";
   my ($self, $tar_gz, $context) = @_;
 
   if (!can_run "unzip") {
