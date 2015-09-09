@@ -7,6 +7,7 @@ package Application::Base;
 use Moose;
 use Rex::Commands::Run;
 use Rex::Commands::Service;
+use Data::Dumper;
 
 has project => ( is => 'ro' );
 
