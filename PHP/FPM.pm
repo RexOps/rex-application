@@ -17,11 +17,11 @@ extends qw(Application::PHP);
 override get_instances => sub {
   my ($self) = @_;
 
-  return Application::PHP::FPM::Instance->new(
+  return (Application::PHP::FPM::Instance->new(
     app => $self,
     instance => $self->project->vhost,
     instance_path => File::Spec->catdir($self->project->project_path, "www", $self->project->vhost),
-  );
+  ));
 
 };
 
