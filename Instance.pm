@@ -19,7 +19,8 @@ use Array::Diff;
 
 use overload
   '==' => sub { shift->_comp(@_) },
-  'eq' => sub { shift->_comp(@_) };
+  'eq' => sub { shift->_comp(@_) },
+  '""'  => sub { shift->to_s() };
 
 BEGIN {
   use Rex::Shared::Var;
@@ -338,6 +339,11 @@ sub wait_for_start {
 sub _comp {
   my ($self, $other) = @_;
   return ($self->instance_path eq $other->instance_path); 
+}
+
+sub to_s {
+  my ($self) = @_;
+  return $self->instance;
 }
 
 
