@@ -22,6 +22,21 @@ sub get_active {
   return $active;
 }
 
+sub get_deployable_instance {
+  my ($self) = @_;
+  my $instance = $self->get_inactive;
+
+  if(! $instance && scalar($self->get_instances) == 1) {
+    $instance = $self->get_active;
+  }
+
+  if(! $instance) {
+    die "Can't find any instances.";
+  }
+
+  return $instance;
+}
+
 sub get_instances {
   die "Must be overwritten by upper class.";
 }
