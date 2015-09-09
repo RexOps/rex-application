@@ -25,10 +25,11 @@ sub get_active {
 
 sub get_deployable_instance {
   my ($self) = @_;
+
+  my @instances = $self->get_instances;
   my $instance = $self->get_inactive;
-print Dumper $instance;
-print ">>>> " . scalar($self->get_instances) . "\n";
-  if(! $instance && scalar($self->get_instances) == 1) {
+
+  if(! $instance && scalar(@instances) == 1) {
     $instance = $self->get_active;
   }
 
