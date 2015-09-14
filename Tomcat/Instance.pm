@@ -75,7 +75,7 @@ has port => (
   }
 );
 
-after start => sub {
+after service_start => sub {
   my ($self) = @_;
   $self->wait_for_start;
 };

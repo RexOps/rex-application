@@ -273,18 +273,15 @@ sub start {
   my ($self, $param) = @_;
 
   if( ! service $self->service_name => "status" ) {
-    sudo sub {
-      service $self->service_name => "start";
-    };
-
-#    if($self->sleep_by_start) {
-#      my $sleep_time   = $param->{sleep} // 30;
-#      sleep $sleep_time;
-#    }
-#    else {
-#      $self->wait_for_start;
-#    }
+    $self->service_start;
   }
+}
+
+sub service_start {
+  my ($self) = @_;
+  sudo sub {
+    service $self->service_name => "start";
+  };
 }
 
 
