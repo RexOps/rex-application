@@ -7,48 +7,43 @@ package Application::PHP::FPM::Instance;
 
 use Moose;
 
-use Rex -base;
 use Rex::Apache::Deploy qw/Symlink/;
 use File::Spec;
 use Data::Dumper;
 use Application::Download;
 use Rex::Commands::Run;
+use Rex::Commands::Fs;
+use Rex::Commands::File;
+use Rex::Commands::Service;
 
 
-extends qw(Application::Instance);
+extends qw(Application::PHP::Instance);
 
-has deploy_directory => (
-  is      => 'ro',
-  lazy    => 1,
-  default => sub {
-    my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version);
-  },
-);
-
-has doc_root => (
-  is => 'ro',
+has owner => (
+  is => "ro",
   lazy => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "app");
-  },
+    my $php_fpm_config = "/etc/php-fpm.d/" . $self->app->project->vhost . ".conf";
+    if(is_file($php_fpm_config)) {
+      my ($user_line) = grep { m/^user =/ } split(/\n/, cat $php_fpm_config);
+      my ($null, $user) = split(/ = /, $user_line);
+      return $user;
+    }
+  }
 );
 
-has deploy_version => (
-  is => 'ro',
-  lazy => 1,
-  default => sub {
-    return $ENV{version};
-  },
-);
-
-has is_active => (
-  is      => 'ro',
-  lazy    => 1,
+has group => (
+  is => "ro",
+  lazy => 1, 
   default => sub {
     my ($self) = @_;
-    return 1;
+    my $php_fpm_config = "/etc/php-fpm.d/" . $self->app->project->vhost . ".conf";
+    if(is_file($php_fpm_config)) {
+      my ($group_line) = grep { m/^group =/ } split(/\n/, cat $php_fpm_config);
+      my ($null, $group) = split(/ = /, $group_line);
+      return $group;
+    }
   }
 );
 
@@ -57,57 +52,10 @@ override detect_service_name => sub {
   return "php-fpm";
 };
 
-override deploy_app => sub {
-  my ($self, $tar_gz, $context) = @_;
-
-  if (!can_run "unzip") {
-    die('unzip command not found.');
-  }
-
-  deploy_to(File::Spec->catdir($self->instance_path, "deploy"));
-  document_root($self->doc_root);
-
-  generate_deploy_directory(sub { return $self->deploy_version });
-
-  deploy Application::Download::get($tar_gz); 
-
-};
-
 override activate => sub {
   my ($self) = @_;
   run "ln -snf " . File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version, "public") . " " . $self->doc_root;
   $self->restart();
 };
-
-
-override restart => sub {
-  my ($self, $param) = @_;
-
-  sudo sub {
-    service $self->service_name => "restart";
-  };
-};
- 
-sub purge_old_versions {
-  my ($self) = @_;
-
-  my $path = $self->instance_path;
-  my @files = ls File::Spec->catdir($path, "deploy");
-  my @files_sorted_by_mtime =
-    grep { !m/^\./ && is_dir "$path/$_" }
-    sort {
-      my %stat_a = stat "$path/$a";
-      my %stat_b = stat "$path/$b";
-      $stat_a{mtime} <=> $stat_b{mtime};
-    } @files;
-
-  while (scalar @files_sorted_by_mtime > 2) {
-    my $d = shift @files_sorted_by_mtime;
-    Rex::Logger::info("Removing $path/$d");
-    rmdir "$path/$d";
-  }
-}
-
-
 
 1;

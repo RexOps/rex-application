@@ -8,11 +8,17 @@ package Application::PHP;
 
 use Moose;
 
-has vhost => (
-  is => 'ro',
+has post_configuration => (
+  is      => 'ro',
+  default => sub { 1 },
 );
 
-extends qw(Application::Base);
+has post_migration => (
+  is      => 'ro',
+  default => sub { 1 },
+);
+
+extends qw(Application::Static);
 
 1;
 

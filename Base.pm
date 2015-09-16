@@ -11,6 +11,20 @@ use Data::Dumper;
 
 has project => ( is => 'ro' );
 
+# control if the configuration should be placed before or after the
+# dapplication deployment.
+has post_configuration => (
+  is      => 'ro',
+  default => sub { 0 },
+);
+
+
+# control if the db migration should be done after deployment.
+has post_migration => (
+  is      => 'ro',
+  default => sub { 0 },
+);
+
 sub get_inactive {
   my ($self) = @_;
   my ($inactive) = grep { ! $_->is_active } $self->get_instances;

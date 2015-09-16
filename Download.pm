@@ -16,7 +16,7 @@ use File::Basename;
 
 BEGIN {
   use Rex::Shared::Var;
-  share qw($download_count $deploy_file);
+  share qw(%download_count $deploy_file);
 };
 
 sub get {
@@ -26,18 +26,18 @@ sub get {
 
   my $tmp_dir;
 
-  if(! $download_count) {
-    $download_count = 1;
+  if(! $download_count{$url}) {
+    $download_count{$url} = 1;
   }
   else {
-    $download_count = $download_count + 1;
+    $download_count{$url} = $download_count{$url} + 1;
   }
 
   if($url =~ m/^http:/) {
     Rex::Commands::LOCAL {
       $tmp_dir = "tmp/deploy";
 
-      if($download_count && $download_count > 1) {
+      if($download_count{$url} && $download_count{$url} > 1) {
         $url = "$tmp_dir/$deploy_file";
         return;
       }
@@ -58,7 +58,7 @@ sub get {
       # we must download the war from artifactory
       $tmp_dir = "tmp/deploy";
 
-      if($download_count && $download_count > 1) {
+      if($download_count{$url} && $download_count{$url} > 1) {
         $url = "$tmp_dir/$deploy_file";
         return;
       }

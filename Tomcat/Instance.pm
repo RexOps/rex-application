@@ -42,7 +42,7 @@ has manager_user     => (
   default => sub {
     my ($self) = @_;
     my $content = cat(File::Spec->catfile($self->instance_path, "conf", "tomcat-users.xml"));
-    my $ref = XMLin($content);
+    my $ref = XMLin($content, Force_Array => 1);
     my ($manager_user) = grep { $_->{roles} =~ m/manager\-script/ } @{ $ref->{user} };
     return $manager_user->{username};
   },
@@ -54,23 +54,45 @@ has manager_password => (
   default => sub {
     my ($self) = @_;
     my $content = cat(File::Spec->catfile($self->instance_path, "conf", "tomcat-users.xml"));
-    my $ref = XMLin($content);
+    my $ref = XMLin($content, Force_Array => 1);
     my ($manager_pw) = grep { $_->{roles} =~ m/manager\-script/ } @{ $ref->{user} };
     return $manager_pw->{password};
   },
 );
 
-has owner => (is => "ro", lazy => 1, default => sub { shift->detect_service_name });
-has group => (is => "ro", lazy => 1, default => sub { shift->detect_service_name });
+has owner => (
+  is => "ro",
+  lazy => 1,
+  default => sub {
+    for my $u (qw/tomcat tomcat7 tomcat8/) {
+      run "id $u";
+      if($? == 0) { return $u; }
+    }
+  }
+);
+
+has group => (
+  is => "ro",
+  lazy => 1, 
+  default => sub {
+    for my $u (qw/tomcat tomcat7 tomcat8/) {
+      run "id $u";
+      if($? == 0) { return $u; }
+    }
+  }
+);
 
 has port => (
   is      => "ro",
   lazy    => 1,
   default => sub {
     my ($self) = @_;
-    my @lines = split("\n", cat(File::Spec->catfile($self->instance_path, "conf", "wrapper.conf")));
-    my ($http_port_line) = grep { m/\-Dtomcat\.http\.port=/ } @lines;
-    my ($port) = ( $http_port_line =~ m/=(\d+)$/ );
+    my $port;
+    sudo sub {
+      my @lines = split("\n", cat(File::Spec->catfile($self->instance_path, "conf", "wrapper.conf.d", "java.additional.conf")));
+      my ($http_port_line) = grep { m/\-Dtomcat\.http\.port=/ } @lines;
+      ($port) = ( $http_port_line =~ m/=(\d+)$/ );
+    };
     return $port;
   }
 );
@@ -114,49 +136,7 @@ override deploy_app => sub {
 
   my $tmp_dir;
 
-  if($war =~ m/^artifactory:/) {
-    if(! $download_count) {
-      $download_count = 1;
-    }
-    else {
-      $download_count = $download_count + 1;
-    }
-
-    Rex::Commands::LOCAL {
-      # we must download the war from artifactory
-      $tmp_dir = "tmp/deploy";
-
-      if($download_count && $download_count > 1) {
-        $war = "$tmp_dir/$deploy_file";
-        return;
-      }
-
-      rmdir $tmp_dir;
-      mkdir $tmp_dir;
-
-      my ($_war, $query_string) = split(/\?/, $war);
-      $query_string ||= "";
-
-      my @query_params = split(/\&/, $query_string);
-      my %q_params = ();
-      for my $qp (@query_params) {
-        my ($key, $val) = split(/=/, $qp, 2);
-        $q_params{$key} = $val;
-      }
-
-      $war = $_war;
-
-      my ($repository, $package, $version) = split(/\//, substr($war, length("artifactory://")));
-      $deploy_file = Artifactory::download {
-        repository => $repository,
-        package    => $package,
-        version    => $version,
-        to         => $tmp_dir,
-      };
-
-      $war = "$tmp_dir/$deploy_file";
-    };
-  }
+  $war = Application::Download::get($war);
 
   if( ! -f $war ) {
     die "File $war not found.";
@@ -175,6 +155,14 @@ override deploy_app => sub {
 override detect_service_name => sub {
   my ($self) = @_;
 
+  if(can_run "systemctl") {
+    my $sysctl_out = run "systemctl list-units | grep tomcat-" . $self->instance;
+
+    if($sysctl_out) {
+      return "tomcat-" . $self->instance;
+    }
+  }
+
   my $out = run "rpm -qa | grep tomcat";
 
   if($out =~ m/tomcat8/) {
@@ -192,17 +180,27 @@ override rescue => sub {
 
   my $sleep_time = $param->{sleep} // 30;
 
+  my $context = "ROOT";
+
+  if(exists $param->{context}) {
+    $context = $param->{context};
+  }
+
+  if($context eq "/") {
+    $context = "ROOT";
+  }
+
   sudo sub {
     service $self->service_name => "stop";
   };
 
   sudo sub {
-    rm(File::Spec->catfile($self->instance_path, "webapps", "ROOT.war"));
-    rmdir File::Spec->catfile($self->instance_path, "webapps", "ROOT");
+    rm(File::Spec->catfile($self->instance_path, "webapps", "$context.war"));
+    rmdir File::Spec->catfile($self->instance_path, "webapps", $context);
   };
 
   if($param->{purge_work_directory}) {
-    $self->purge_work_directory()  
+    $self->purge_work_directory($param);
   }
 
   sudo sub {
@@ -221,9 +219,19 @@ override rescue => sub {
 
 override purge_work_directory => sub {
  
-  my ($self) = @_;
+  my ($self, $param) = @_;
 
-  my $work_dir = File::Spec->catdir($self->instance_path, "work", "Catalina", "localhost");
+  my $context = "_";
+
+  if(exists $param->{context}) {
+    $context = $param->{context};
+  }
+
+  if($context eq "/") {
+    $context = "_";
+  }
+
+  my $work_dir = File::Spec->catdir($self->instance_path, "work", "Catalina", "localhost", $context);
 
   if(! is_dir($work_dir)) {
     Rex::Logger::info("Tomcat work dir doesn't exist: $work_dir");
@@ -304,6 +312,63 @@ override kill => sub {
   Rex::Logger::info("Tomcat killed. Hammer was large enough :)");
 };
 
+override restart => sub {
+
+  my ($self, $param) = @_;
+
+  my $wait_timeout = $param->{wait_timeout} // Rex::Commands::get("wait_timeout");
+  my $sleep_time   = $param->{sleep} // 30;
+
+  eval {
+    local $SIG{ALRM} = sub { die "timeout"; };
+
+    alarm $wait_timeout;
+
+    sudo sub {
+      service $self->service_name => "restart";
+    };
+
+    alarm 0;
+
+    1;
+  } or do {
+    Rex::Logger::info("Instance didn't stop.", "error");
+    die "Instance didn't restart.";
+  };
+
+  if($self->sleep_by_start) {
+    Rex::Logger::info("Sleeping $sleep_time seconds to give instance time to start...");
+    sleep $sleep_time;
+  }
+  else {
+    $self->wait_for_start;
+  }
+};
+
+
+override stop => sub {
+
+  my ($self, $param) = @_;
+
+  my $wait_timeout = $param->{wait_timeout} // Rex::Commands::get("wait_timeout");
+
+  eval {
+    local $SIG{ALRM} = sub { die("timeout"); };
+    alarm $wait_timeout;
+
+    Rex::Logger::info("Try to stop " . $self->service_name);
+    sudo sub {
+      service $self->service_name => "stop";
+    };
+
+    alarm 0;
+    1;
+  } or do {
+    Rex::Logger::info("Instance didn't stopped.", "error");
+    die "Instance didn't stopped.";
+  };
+
+};
 
 sub wait_for_start {
   my ($self) = @_;

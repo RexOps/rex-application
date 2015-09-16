@@ -65,6 +65,15 @@ has configuration_path => (
   }
 );
 
+has configuration_template_variables => (
+  is => "ro",
+  lazy => 1,
+  default => sub {
+    my ($self) = @_;
+    return $self->app->project->configuration_template_variables();
+  },
+);
+
 sub activate {
   my ($self) = @_;
   my $fh = file_write(File::Spec->catfile($self->instance_path, "active"));
@@ -161,6 +170,9 @@ sub configure_app {
   if(ref $params eq "CODE") {
     $params = $params->($self, $configuration_source);
   }
+  else {
+    $params = $self->configuration_template_variables();
+  }
 
   my @files;
 
@@ -186,15 +198,17 @@ sub configure_app {
   my $deleted_files = $diff->deleted;
 
   sudo sub {
-    # ensure that deleted files are absent
-    file "$configuration_dest/$_", ensure => 'absent' for @{ $deleted_files };
 
     # ensure that configuration directory exists
+    Rex::Logger::info("Creating: $configuration_dest");
     file $configuration_dest,
       ensure => 'directory',
       owner  => $self->owner,
       group  => $self->group,
       mode   => '0755';
+
+    # ensure that deleted files are absent
+    file "$configuration_dest/$_", ensure => 'absent' for @{ $deleted_files };
 
     for my $file (@files) {
       Rex::Logger::info("Uploading configuration file: $configuration_dest/$file");
@@ -212,61 +226,21 @@ sub configure_app {
 
 }
 
-sub restart {
 
+sub restart {
   my ($self, $param) = @_;
 
-  my $wait_timeout = $param->{wait_timeout} // Rex::Commands::get("wait_timeout");
-  my $sleep_time   = $param->{sleep} // 30;
-
-  eval {
-    local $SIG{ALRM} = sub { die "timeout"; };
-
-    alarm $wait_timeout;
-
-    sudo sub {
-      service $self->service_name => "restart";
-    };
-
-    alarm 0;
-
-    1;
-  } or do {
-    Rex::Logger::info("Instance didn't stop.", "error");
-    die "Instance didn't restart.";
+  sudo sub {
+    service $self->service_name => "restart";
   };
-
-  if($self->sleep_by_start) {
-    Rex::Logger::info("Sleeping $sleep_time seconds to give instance time to start...");
-    sleep $sleep_time;
-  }
-  else {
-    $self->wait_for_start;
-  }
 }
 
 sub stop {
-
   my ($self, $param) = @_;
 
-  my $wait_timeout = $param->{wait_timeout} // Rex::Commands::get("wait_timeout");
-
-  eval {
-    local $SIG{ALRM} = sub { die("timeout"); };
-    alarm $wait_timeout;
-
-    Rex::Logger::info("Try to stop " . $self->service_name);
-    sudo sub {
-      service $self->service_name => "stop";
-    };
-
-    alarm 0;
-    1;
-  } or do {
-    Rex::Logger::info("Instance didn't stopped.", "error");
-    die "Instance didn't stopped.";
+  sudo sub {
+    service $self->service_name => "stop";
   };
-
 }
 
 sub start {
