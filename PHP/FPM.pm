@@ -10,25 +10,25 @@ use Moose;
 use Application::PHP::FPM::Instance;
 use Data::Dumper;
 
+use Rex::Commands::Run;
 use Rex::Apache::Deploy qw/Symlink/;
 
 extends qw(Application::PHP);
-
-override get_instances => sub {
-  my ($self) = @_;
-
-  return (Application::PHP::FPM::Instance->new(
-    app => $self,
-    instance => $self->project->vhost,
-    instance_path => File::Spec->catdir($self->project->project_path, "www", $self->project->vhost),
-  ));
-
-};
 
 override switch => sub {
   my ($self) = @_;
   $self->get_instances->activate;
 };
+
+Project->register_app_type(100, __PACKAGE__, sub {
+  my @php_out    = run "rpm -qa | grep php-fpm";
+
+  if(scalar @php_out >= 1) {
+    return 1;
+  }
+
+  return 0;
+});
 
 1;
 

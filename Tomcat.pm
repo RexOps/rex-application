@@ -43,5 +43,16 @@ override get_instances => sub {
   return @ret;
 };
 
+
+Project->register_app_type(100, __PACKAGE__, sub {
+  my @tomcat_out = run "rpm -qa | grep tomcat";
+
+  if(scalar @tomcat_out >= 1) {
+    return 1;
+  }
+
+  return 0;
+});
+
 1;
 

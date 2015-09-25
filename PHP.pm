@@ -6,6 +6,7 @@
 
 package Application::PHP;
 
+use Rex::Commands::Run;
 use Moose;
 
 has post_configuration => (
@@ -19,6 +20,16 @@ has post_migration => (
 );
 
 extends qw(Application::Static);
+
+Project->register_app_type(500, __PACKAGE__, sub {
+  my @php_out    = run "rpm -qa | grep php";
+
+  if(scalar @php_out >= 1) {
+    return 1;
+  }
+
+  return 0;
+});
 
 1;
 
