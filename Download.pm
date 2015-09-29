@@ -73,7 +73,10 @@ sub get {
 
       $url = $_url;
 
-      my ($repository, $package, $version) = split(/\//, substr($url, length("artifactory://")));
+
+      #my ($repository, $package, $version) = split(/\//, substr($url, length("artifactory://")));
+      my ($repository, $package, $version) = ($url =~ m|^artifactory://([^/]+)/(.*)/([^/]+)$|);
+      $package =~ s/\//./g;
       $deploy_file = Artifactory::download {
         repository => $repository,
         package    => $package,

@@ -19,6 +19,8 @@ extends qw(Application::Base);
 override get_instances => sub {
   my ($self) = @_;
 
+  my $instance_class = ref($self) . "::Instance";
+
   my $tomcat_path = File::Spec->catdir($self->project->project_path, "tomcat");
 
   if(!is_dir($tomcat_path)) {
@@ -33,7 +35,7 @@ override get_instances => sub {
   my @ret;
 
   for my $tc_instance (@tomcats) {
-    push @ret, Application::Tomcat::Instance->new(
+    push @ret, $instance_class->new(
       app           => $self,
       instance      => $tc_instance,
       instance_path => File::Spec->catdir($tomcat_path, $tc_instance),

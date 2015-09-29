@@ -7,6 +7,8 @@ package Application::Instance;
 
 use Moose;
 use File::Spec;
+use Data::Dumper;
+use File::Basename qw/dirname/;
 
 use Rex::Commands::Run;
 use Rex::Commands::File;
@@ -98,6 +100,52 @@ sub deploy_lib { die "Must be overwritten by upper class."; }
 
 sub configure_app {
   my ($self, $configuration_source, $configuration_dest, $params) = @_;
+
+  if(ref $configuration_source && $configuration_source->can("files")) {
+    # this is a configurations object
+
+    sudo sub {
+
+      my $conf_dest = $self->configuration_path;
+
+      $configuration_dest ||= "app";
+
+      if($configuration_dest !~ m/^\//) {
+        # relative path
+        $configuration_dest = "$conf_dest/$configuration_dest";
+      }
+
+      # ensure that configuration directory exists
+      Rex::Logger::info("Creating: $configuration_dest");
+      file $configuration_dest,
+        ensure => 'directory',
+        owner  => $self->owner,
+        group  => $self->group,
+        mode   => '0755';
+
+      my $files = $configuration_source->files;
+      for my $file (@{ $files }) {
+
+        my $dest_file = File::Spec->catfile($configuration_dest, $file->name);
+
+        Rex::Logger::info("Uploading configuration file: $dest_file");
+
+        file dirname($dest_file),
+          ensure => "directory",
+          mode   => '0755',
+          owner  => $self->owner,
+          group  => $self->group;
+
+        file $dest_file,
+          content => $file->content,
+          mode   => '0664',
+          owner  => $self->owner,
+          group  => $self->group;
+      }
+    };
+
+    return;
+  }
 
   if(ref $configuration_source eq "CODE") {
     return $configuration_source->($self);
