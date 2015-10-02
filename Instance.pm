@@ -76,13 +76,17 @@ has configuration_template_variables => (
 
 sub activate {
   my ($self) = @_;
-  my $fh = file_write(File::Spec->catfile($self->instance_path, "active"));
-  $fh->close;
+  sudo sub {
+    my $fh = file_write(File::Spec->catfile($self->instance_path, "active"));
+    $fh->close;
+  };
 }
 
 sub deactivate {
   my ($self) = @_;
-  rm(File::Spec->catfile($self->instance_path, "active"));
+  sudo sub {
+    rm(File::Spec->catfile($self->instance_path, "active"));
+  };
 }
 
 sub detect_service_name { die "Must be overwritten by upper class."; }
