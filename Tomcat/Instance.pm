@@ -23,6 +23,7 @@ use Rex::Commands::Process;
 use Rex::Commands::Tail;
 
 use Application::Download;
+use File::Basename qw/basename/;
 
 require Rex::Commands;
 
@@ -105,7 +106,7 @@ after service_start => sub {
 
 override deploy_lib => sub {
   
-  my ($self, $upload_lib_path) = @_;
+  my ($self, $libraries) = @_;
 
   if(! -d $upload_lib_path ) {
     die "Directory $upload_lib_path not found.";
@@ -115,17 +116,20 @@ override deploy_lib => sub {
 
   Rex::Logger::info("Deploying additional libraries to: $instance_path");
 
-  sudo sub {
+  file "$instance_path/lib",
+    ensure => 'directory',
+    owner  => $self->owner,
+    group  => $self->group,
+    mode   => 755;
 
-    file "$instance_path/lib",
-      ensure => 'directory',
-      owner  => $self->owner,
-      group  => $self->group,
-      mode   => 755;
-
-    sync_up $upload_lib_path, "$instance_path/lib";
-
-  };
+  for my $lib (@{ $libraries }) {
+    my $lib_file = Application::Download::get($lib);
+    sudo sub {
+      file "$instance_path/lib/" . basename($lib_file),
+        source => $lib_file,
+        mode   => 644;
+    };
+  }
 
   $self->restart();
 };
