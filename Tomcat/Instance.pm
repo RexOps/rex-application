@@ -108,10 +108,6 @@ override deploy_lib => sub {
   
   my ($self, $libraries) = @_;
 
-  if(! -d $upload_lib_path ) {
-    die "Directory $upload_lib_path not found.";
-  }
-
   my $instance_path = $self->instance_path;
 
   Rex::Logger::info("Deploying additional libraries to: $instance_path");
