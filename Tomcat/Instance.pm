@@ -124,6 +124,9 @@ override deploy_lib => sub {
 
   for my $lib (@{ $libraries }) {
     my $lib_file = Application::Download::get($lib);
+
+    Rex::Logger::info("Uploading library: " . basename($lib_file) . " -> $instance_path/lib");
+
     sudo sub {
       file "$instance_path/lib/" . basename($lib_file),
         source => $lib_file,
