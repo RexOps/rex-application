@@ -58,11 +58,6 @@ sub get {
       # we must download the war from artifactory
       $tmp_dir = "tmp/deploy";
 
-      if($download_count{$url} && $download_count{$url} > 1) {
-        $url = "$tmp_dir/$deploy_file";
-        return;
-      }
-
       rmdir $tmp_dir;
       mkdir $tmp_dir;
 
