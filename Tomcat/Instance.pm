@@ -112,11 +112,15 @@ override deploy_lib => sub {
 
   Rex::Logger::info("Deploying additional libraries to: $instance_path");
 
-  file "$instance_path/lib",
-    ensure => 'directory',
-    owner  => $self->owner,
-    group  => $self->group,
-    mode   => 755;
+  sudo sub {
+
+    file "$instance_path/lib",
+      ensure => 'directory',
+      owner  => $self->owner,
+      group  => $self->group,
+      mode   => 755;
+
+  };
 
   for my $lib (@{ $libraries }) {
     my $lib_file = Application::Download::get($lib);
