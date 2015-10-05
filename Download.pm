@@ -84,6 +84,7 @@ sub get {
         package    => $package,
         version    => $version,
         to         => $tmp_dir,
+        %{ $q_params }
       };
 
       $url = "$tmp_dir/$deploy_file";
