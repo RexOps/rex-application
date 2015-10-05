@@ -106,7 +106,7 @@ after service_start => sub {
 
 override deploy_lib => sub {
   
-  my ($self, $libraries) = @_;
+  my ($self, @libraries) = @_;
 
   my $instance_path = $self->instance_path;
 
@@ -122,7 +122,7 @@ override deploy_lib => sub {
 
   };
 
-  for my $lib (@{ $libraries }) {
+  for my $lib (@libraries) {
     my $lib_file = Application::Download::get($lib);
 
     Rex::Logger::info("Uploading library: " . basename($lib_file) . " -> $instance_path/lib");
