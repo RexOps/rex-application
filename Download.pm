@@ -37,7 +37,7 @@ sub get {
     Rex::Commands::LOCAL {
       $tmp_dir = "tmp/deploy";
 
-      if($download_count{$url} && $download_count{$url} > 1) {
+      if($download_count{$url} && $download_count{$url} > 1 && $deploy_file) {
         $url = "$tmp_dir/$deploy_file";
         return;
       }
