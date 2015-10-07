@@ -81,7 +81,13 @@ override deploy_app => sub {
 
   generate_deploy_directory(sub { return $self->deploy_version });
 
-  deploy Application::Download::get($tar_gz); 
+  my $file = Application::Download::get($tar_gz);
+  sudo {
+    command => sub {
+      deploy $file;
+    },
+    user => $self->owner,
+  };
 
   sudo sub {
     chown $self->owner, 
