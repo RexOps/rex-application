@@ -33,7 +33,7 @@ sub get {
     $download_count{$url} = $download_count{$url} + 1;
   }
 
-  if($url =~ m/^http:/) {
+  if($url =~ m/^https?:/) {
     Rex::Commands::LOCAL {
       $tmp_dir = "tmp/deploy";
 

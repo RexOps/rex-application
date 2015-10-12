@@ -90,7 +90,12 @@ has port => (
     my ($self) = @_;
     my $port;
     sudo sub {
-      my @lines = split("\n", cat(File::Spec->catfile($self->instance_path, "conf", "wrapper.conf.d", "java.additional.conf")));
+      my $wrapper_conf = File::Spec->catfile($self->instance_path, "conf", "wrapper.conf.d", "java.additional.conf");
+      if(!is_file($wrapper_conf)) {
+        $wrapper_conf = File::Spec->catfile($self->instance_path, "conf", "wrapper.conf");
+      }
+
+      my @lines = split("\n", cat($wrapper_conf));
       my ($http_port_line) = grep { m/\-Dtomcat\.http\.port=/ } @lines;
       ($port) = ( $http_port_line =~ m/=(\d+)$/ );
     };
@@ -149,12 +154,11 @@ override deploy_app => sub {
     die "File $war not found.";
   }
 
-  deploy Application::Download::get($war),
+  deploy $war,
     username     => $self->manager_user,
     password     => $self->manager_password,
     port         => $self->port,
     context_path => $context;
-
 
 };
 
