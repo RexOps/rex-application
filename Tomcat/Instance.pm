@@ -210,9 +210,7 @@ override rescue => sub {
     rmdir File::Spec->catfile($self->instance_path, "webapps", $context);
   };
 
-  if($param->{purge_work_directory}) {
-    $self->purge_work_directory($param);
-  }
+  $self->purge_work_directory($param);
 
   sudo sub {
     service $self->service_name => "start";
