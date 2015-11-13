@@ -11,7 +11,7 @@ use Moose;
 
 has post_configuration => (
   is      => 'ro',
-  default => sub { 0 },
+  default => sub { 1 },
 );
 
 has post_migration => (
