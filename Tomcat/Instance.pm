@@ -22,18 +22,12 @@ use Rex::Commands::Service;
 use Rex::Commands::Process;
 use Rex::Commands::Tail;
 
-use Application::Download;
 use File::Basename qw/basename/;
 
 require Rex::Commands;
 
 use Apptest::UserAgent;
 use Artifactory;
-
-BEGIN {
-  use Rex::Shared::Var;
-  share qw($download_count $deploy_file);
-};
 
 extends qw(Application::Instance);
 
@@ -128,7 +122,7 @@ override deploy_lib => sub {
   };
 
   for my $lib (@libraries) {
-    my $lib_file = Application::Download::get($lib);
+    my $lib_file = $self->app->download($lib);
 
     Rex::Logger::info("Uploading library: " . basename($lib_file) . " -> $instance_path/lib");
 
@@ -148,7 +142,7 @@ override deploy_app => sub {
 
   my $tmp_dir;
 
-  $war = Application::Download::get($war);
+  $war = $self->app->download($war);
 
   if( ! -f $war ) {
     die "File $war not found.";

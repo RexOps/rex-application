@@ -8,88 +8,47 @@ package Application::Download;
 use strict;
 use warnings;
 
-require Rex::Commands;
-use Rex::Commands::Download;
 use Rex::Commands::Fs;
+use Rex::Commands::File;
+use File::Basename qw(basename);
+use File::Spec;
+use Cwd qw(getcwd);
+require Rex::Commands;
 
-use File::Basename;
-
-BEGIN {
-  use Rex::Shared::Var;
-  share qw(%download_count $deploy_file);
-};
+use Carp;
 
 sub get {
-  my ($url) = @_;
+  my ($url, %option) = @_;
+  my $ret;
 
   Rex::Logger::info("Check to download: $url");
 
-  my $tmp_dir;
+  my ($tmp_dir, $deploy_file);
+  $tmp_dir = "tmp/deploy";
+  Rex::Commands::LOCAL( sub { mkdir $tmp_dir; });
 
-  if(! $download_count{$url}) {
-    $download_count{$url} = 1;
+  my ($type, $rest) = ($url =~ m|^([^:]+)://(.*)$|);
+
+  eval "use Application::Download::\u$type";
+  if($@) {
+    confess "Error loading Application::Download::\u$type. Module not found.\nERROR: $@\n";
   }
   else {
-    $download_count{$url} = $download_count{$url} + 1;
+    my $class = "Application::Download::\u$type";
+    my $dl = $class->new;
+    $ret = $dl->download($url => $tmp_dir);
+
+    if(exists $option{extract} && $option{extract}) {
+      Rex::Commands::LOCAL(sub {
+        my $basename = basename($ret);
+        mkdir "$tmp_dir/extract_$basename";
+        extract(File::Spec->catfile(getcwd(), $ret), to => "$tmp_dir/extract_$basename");
+        $ret = "$tmp_dir/extract_$basename";
+      });
+    }
   }
 
-  if($url =~ m/^https?:/) {
-    Rex::Commands::LOCAL {
-      $tmp_dir = "tmp/deploy";
-
-      if($download_count{$url} && $download_count{$url} > 1 && $deploy_file) {
-        $url = "$tmp_dir/$deploy_file";
-        return;
-      }
-
-      rmdir $tmp_dir;
-      mkdir $tmp_dir;
-
-      download $url, "$tmp_dir/" . File::Basename::basename($url);
-
-      $deploy_file = File::Basename::basename($url);
-
-      $url = "$tmp_dir/$deploy_file";
-    };
-  }
-  elsif($url =~ m/^artifactory:/) {
-
-    Rex::Commands::LOCAL {
-      # we must download the war from artifactory
-      $tmp_dir = "tmp/deploy";
-
-      rmdir $tmp_dir;
-      mkdir $tmp_dir;
-
-      my ($_url, $query_string) = split(/\?/, $url);
-      $query_string ||= "";
-
-      my @query_params = split(/\&/, $query_string);
-      my %q_params = ();
-      for my $qp (@query_params) {
-        my ($key, $val) = split(/=/, $qp, 2);
-        $q_params{$key} = $val;
-      }
-
-      $url = $_url;
-
-
-      #my ($repository, $package, $version) = split(/\//, substr($url, length("artifactory://")));
-      my ($repository, $package, $version) = ($url =~ m|^artifactory://([^/]+)/(.*)/([^/]+)$|);
-      $package =~ s/\//./g;
-      $deploy_file = Artifactory::download {
-        repository => $repository,
-        package    => $package,
-        version    => $version,
-        to         => $tmp_dir,
-        %q_params
-      };
-
-      $url = "$tmp_dir/$deploy_file";
-    };
-  }
-
-  return $url;
+  return $ret;
 }
 
 

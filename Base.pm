@@ -8,6 +8,7 @@ use Moose;
 use Rex::Commands::Run;
 use Rex::Commands::Service;
 use Data::Dumper;
+use Application::Download;
 
 has project => ( is => 'ro' );
 
@@ -24,6 +25,11 @@ has post_migration => (
   is      => 'ro',
   default => sub { 0 },
 );
+
+sub download {
+  my ($self, $url) = @_;
+  return Application::Download::get($url);
+}
 
 sub get_inactive {
   my ($self) = @_;

@@ -10,7 +10,6 @@ use Moose;
 use Rex::Apache::Deploy qw/Symlink/;
 use File::Spec;
 use Data::Dumper;
-use Application::Download;
 use Rex::Commands::Run;
 use Rex::Commands::Fs;
 use Rex::Commands::File;
@@ -81,7 +80,7 @@ override deploy_app => sub {
 
   generate_deploy_directory(sub { return $self->deploy_version });
 
-  my $file = Application::Download::get($tar_gz);
+  my $file = $self->app->download($tar_gz);
   sudo sub {
     deploy $file;
   };
