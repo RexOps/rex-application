@@ -16,6 +16,8 @@ use Application::Tomcat::Instance;
 
 extends qw(Application::Base);
 
+has name => (is => 'ro', isa => 'Str', default => sub {''});
+
 override get_instances => sub {
   my ($self) = @_;
 
@@ -27,7 +29,10 @@ override get_instances => sub {
     return ();
   }
 
-  my @tomcats = grep {
+  my $app_name = $self->name;
+
+  my @tomcats = grep { $app_name ? m/^\Q$app_name\E\d+/ : 1 }
+  grep {
     is_dir(File::Spec->catdir($tomcat_path, $_))
     && is_dir(File::Spec->catdir($tomcat_path, $_, "webapps"))
   } list_files $tomcat_path;

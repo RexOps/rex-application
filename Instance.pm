@@ -115,6 +115,10 @@ sub configure_app {
         $configuration_dest = "$conf_dest/$configuration_dest";
       }
 
+      if(ref $configuration_dest eq "CODE") {
+        $configuration_dest = $configuration_dest->($self);
+      }
+
       # ensure that configuration directory exists
       Rex::Logger::info("Creating: $configuration_dest");
       file $configuration_dest,
