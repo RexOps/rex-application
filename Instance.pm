@@ -101,6 +101,10 @@ sub deploy_lib { die "Must be overwritten by upper class."; }
 sub configure_app {
   my ($self, $configuration_source, $configuration_dest, $params) = @_;
 
+  if(ref $configuration_source eq "CODE") {
+    return $configuration_source->($self);
+  }
+
   if(ref $configuration_source && $configuration_source->can("files")) {
     # this is a configurations object
 
@@ -149,10 +153,6 @@ sub configure_app {
     };
 
     return;
-  }
-
-  if(ref $configuration_source eq "CODE") {
-    return $configuration_source->($self);
   }
 
   my $conf_dest = $self->configuration_path;
