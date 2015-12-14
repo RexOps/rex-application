@@ -19,12 +19,17 @@ use Rex::Commands::Service;
 
 extends qw(Application::Instance);
 
+has stash_directory => (
+  is => 'ro',
+  default => sub { "deploy" },
+);
+
 has deploy_directory => (
   is      => 'ro',
   lazy    => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version);
+    return File::Spec->catdir($self->instance_path, $self->stash_directory, $self->deploy_version);
   },
 );
 
@@ -76,7 +81,7 @@ override deploy_app => sub {
     die('unzip command not found.');
   }
 
-  deploy_to(File::Spec->catdir($self->instance_path, "deploy"));
+  deploy_to(File::Spec->catdir($self->instance_path, $self->stash_directory));
   document_root($self->doc_root);
 
   generate_deploy_directory(sub { return $self->deploy_version });
@@ -87,12 +92,10 @@ override deploy_app => sub {
   };
 
   sudo sub {
-    chown $self->owner, 
-      File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version),
+    chown $self->owner, $self->deploy_directory,
       recursive => 1;
 
-    chgrp $self->group, 
-      File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version),
+    chgrp $self->group, $self->deploy_directory,
       recursive => 1;
   };
 
@@ -100,7 +103,7 @@ override deploy_app => sub {
 
 override activate => sub {
   my ($self) = @_;
-  run "ln -snf " . File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version) . " " . $self->doc_root;
+  run "ln -snf " . $self->deploy_directory . " " . $self->doc_root;
   $self->restart();
 };
 
@@ -128,7 +131,7 @@ sub purge_old_versions {
 sub create_symlinks {
   my ($self, $links) = @_;
 
-  my $app_dir  = File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version);
+  my $app_dir  = $self->deploy_directory;
   my $data_dir = $self->data_directory;
   
   sudo sub {
