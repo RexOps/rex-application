@@ -373,6 +373,8 @@ sub _comp {
 
 sub to_s {
   my ($self) = @_;
+
+  die "Instance has no name. (use 'instance' attribute)" if(! $self->instance );
   return $self->instance;
 }
 
