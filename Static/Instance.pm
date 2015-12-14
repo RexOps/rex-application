@@ -21,6 +21,7 @@ extends qw(Application::Instance);
 
 has stash_directory => (
   is => 'ro',
+  writer => '_set_stash_directory',
   default => sub { "deploy" },
 );
 
