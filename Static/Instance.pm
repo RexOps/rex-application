@@ -22,12 +22,17 @@ extends qw(Application::Instance);
 has stash_directory => (
   is => 'ro',
   writer => '_set_stash_directory',
+  trigger => sub {
+    my ($self) = @_;
+    $self->_clear_deploy_directory;
+  },
   default => sub { "deploy" },
 );
 
 has deploy_directory => (
   is      => 'ro',
   lazy    => 1,
+  clearer => '_clear_deploy_directory',
   default => sub {
     my ($self) = @_;
     return File::Spec->catdir($self->instance_path, $self->stash_directory, $self->deploy_version);
@@ -37,6 +42,10 @@ has deploy_directory => (
 has deploy_version => (
   is => 'ro',
   lazy => 1,
+  trigger => sub {
+    my ($self) = @_;
+    $self->_clear_deploy_directory;
+  },
   default => sub {
     return $ENV{version};
   },
