@@ -17,8 +17,6 @@ use Application::Download;
 use Application::Configuration::Fs::File;
 use Data::Dumper;
 
-has url => (is => 'ro', isa => 'Str');
-
 has files => (
   is => 'ro',
   isa => 'ArrayRef[Application::Configuration::Fs::File]',
@@ -27,7 +25,7 @@ has files => (
     my ($self) = @_;
     my @files;
 
-    my $extracted_dir = Application::Download::get($self->url, extract => 1);
+    my $extracted_dir = Application::Download::get($self->source, extract => 1);
 
     my @content;
     Rex::Commands::LOCAL(sub {
