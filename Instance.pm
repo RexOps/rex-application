@@ -116,8 +116,11 @@ sub configure_app {
       if($@) {
         confess "Error loading configuration type: $klass.\nError: $@\n";
       }
+      
+      # convert $params to a true hash
+      my %values = %{ $params };
 
-      $cfg_o = $klass->new(source => $configuration_source, parameter => $params);
+      $cfg_o = $klass->new(source => $configuration_source, parameter => \%values);
     }
     else {
       confess "No configuration type found.";
