@@ -161,7 +161,7 @@ override detect_service_name => sub {
   my ($self) = @_;
 
   if(can_run "systemctl") {
-    my $sysctl_out = run "systemctl list-units | grep tomcat-" . $self->instance;
+    my $sysctl_out = run "systemctl | grep tomcat-" . $self->instance;
 
     if($sysctl_out) {
       return "tomcat-" . $self->instance;
