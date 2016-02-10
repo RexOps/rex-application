@@ -172,6 +172,12 @@ override detect_service_name => sub {
 
   if(can_run "systemctl") {
     my $sysctl_out = run "systemctl | grep tomcat-" . $self->instance;
+    
+    if(!$sysctl_out) {
+      if(is_file("/etc/systemd/system/tomcat-" . $self->instance . ".service")) {
+        return "tomcat-" . $self->instance;
+      }
+    }
 
     if($sysctl_out) {
       return "tomcat-" . $self->instance;
