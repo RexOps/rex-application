@@ -21,6 +21,7 @@ use Rex::Commands::Sync;
 use Rex::Commands::Service;
 use Rex::Commands::Process;
 use Rex::Commands::Tail;
+use Rex::Commands::Upload;
 
 use File::Basename qw/basename/;
 
