@@ -127,9 +127,18 @@ override deploy_lib => sub {
     Rex::Logger::info("Uploading library: " . basename($lib_file) . " -> $instance_path/lib");
 
     sudo sub {
-      file "$instance_path/lib/" . basename($lib_file),
-        source => $lib_file,
-        mode   => 644;
+      if($lib_file =~ m/\.zip$/) {
+        # zip file, so we're going to extract it
+        my $lib_file_name = basename $lib_file;
+        upload $lib_file, "/tmp/$lib_file_name";
+        extract "/tmp/$lib_file_name", to => "$instance_path/lib/";
+        unlink "/tmp/$lib_file_name";
+      }
+      else {
+        file "$instance_path/lib/" . basename($lib_file),
+          source => $lib_file,
+          mode   => 644;
+      }
     };
   }
 
