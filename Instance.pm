@@ -96,9 +96,15 @@ sub configure_app {
   my ($self, $configuration_source, $configuration_dest, $params) = @_;
 
   if(ref $configuration_source eq "CODE") {
-    return $configuration_source->($self);
+    my $cfg_ret = $configuration_source->($self);
+    if(ref($cfg_ret) =~ m/::/) {
+      $configuration_source = $cfg_ret;
+    }
+    else {
+      return $cfg_ret;
+    }
   }
-
+  
   if(ref $params eq "CODE") {
     $params = $params->($self, $configuration_source);
   }
