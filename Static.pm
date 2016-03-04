@@ -12,6 +12,11 @@ has vhost => (
   is => 'ro',
 );
 
+has post_configuration => (
+  is      => 'ro',
+  default => sub { 1 },
+);
+
 extends qw(Application::Base);
 
 override get_instances => sub {
