@@ -10,14 +10,21 @@ extends qw(Application::Download::Base);
 
 sub download {
   my ( $self, $url, $tmp_dir ) = @_;
+  
+  my %dl_option = ();
+
+  if($url->has_auth) {
+    $dl_option{user} = $url->user;
+    $dl_option{password} = $url->password;
+  }
 
   my $dl_file;
   Rex::Commands::LOCAL {
     rmdir $tmp_dir;
     mkdir $tmp_dir;
 
-    Rex::Commands::Download::download( $url,
-      "$tmp_dir/" . File::Basename::basename($url) );
+    Rex::Commands::Download::download( $url->to_s_without_auth,
+      "$tmp_dir/" . File::Basename::basename($url), %dl_option );
 
     my $deploy_file = File::Basename::basename($url);
 
