@@ -168,8 +168,16 @@ sub configure_app {
         owner  => $self->owner,
         group  => $self->group;
 
+      my $content;
+      if($dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties)$/) {
+        $content = template(\$file->content);
+      }
+      else {
+        $content = $file->content;
+      }
+      
       file $dest_file,
-        content => $file->content,
+        content => $content,
         mode   => '0664',
         owner  => $self->owner,
         group  => $self->group;
