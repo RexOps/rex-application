@@ -35,13 +35,12 @@ has deploy_version => (
   },
 );
 
-
 has doc_root => (
   is => 'ro',
   lazy => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "app");
+    return File::Spec->catdir($self->instance_path, "htdocs");
   },
 );
 
