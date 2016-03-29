@@ -40,7 +40,7 @@ has doc_root => (
   lazy => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "htdocs");
+    return File::Spec->catdir($self->instance_path, "app");
   },
 );
 
