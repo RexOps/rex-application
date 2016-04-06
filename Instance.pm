@@ -1,5 +1,5 @@
 #
-# 
+#
 # vim: set ts=2 sw=2 tw=0:
 # vim: set expandtab:
 
@@ -22,10 +22,10 @@ use Array::Diff;
 use overload
   '==' => sub { shift->_comp(@_) },
   'eq' => sub { shift->_comp(@_) },
-  '""'  => sub { shift->to_s() };
+  '""' => sub { shift->to_s() };
 
-has app => ( is => 'ro' );
-has instance => ( is => 'ro' );
+has app           => ( is => 'ro' );
+has instance      => ( is => 'ro' );
 has instance_path => ( is => 'ro' );
 
 has is_active => (
@@ -33,7 +33,7 @@ has is_active => (
   lazy    => 1,
   default => sub {
     my ($self) = @_;
-    if(is_file(File::Spec->catfile($self->instance_path, "active"))) {
+    if ( is_file( File::Spec->catfile( $self->instance_path, "active" ) ) ) {
       return 1;
     }
 
@@ -50,20 +50,20 @@ has service_name => (
   }
 );
 
-has sleep_by_start => (is => "ro", default => sub { 0 } );
+has sleep_by_start => ( is => "ro", default => sub { 0 } );
 
 has configuration_path => (
   is      => "ro",
   lazy    => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "conf");
+    return File::Spec->catdir( $self->instance_path, "conf" );
   }
 );
 
 has configuration_template_variables => (
-  is => "ro",
-  lazy => 1,
+  is      => "ro",
+  lazy    => 1,
   default => sub {
     my ($self) = @_;
     return $self->app->project->configuration_template_variables();
@@ -73,7 +73,8 @@ has configuration_template_variables => (
 sub activate {
   my ($self) = @_;
   sudo sub {
-    my $fh = file_write(File::Spec->catfile($self->instance_path, "active"));
+    my $fh =
+      file_write( File::Spec->catfile( $self->instance_path, "active" ) );
     $fh->close;
   };
 }
@@ -81,32 +82,34 @@ sub activate {
 sub deactivate {
   my ($self) = @_;
   sudo sub {
-    rm(File::Spec->catfile($self->instance_path, "active"));
+    rm( File::Spec->catfile( $self->instance_path, "active" ) );
   };
 }
 
-sub detect_service_name { die "Must be overwritten by upper class."; }
-sub kill { die "Must be overwritten by upper class."; }
-sub rescue { die "Must be overwritten by upper class."; }
+sub detect_service_name  { die "Must be overwritten by upper class."; }
+sub kill                 { die "Must be overwritten by upper class."; }
+sub rescue               { die "Must be overwritten by upper class."; }
 sub purge_work_directory { die "Must be overwritten by upper class."; }
-sub deploy_app { die "Must be overwritten by upper class."; }
-sub deploy_lib { die "Must be overwritten by upper class."; }
+sub deploy_app           { die "Must be overwritten by upper class."; }
+sub deploy_lib           { die "Must be overwritten by upper class."; }
 
 sub configure_app {
-  my ($self, $configuration_source, $configuration_dest, $params) = @_;
+  my ( $self, $configuration_source, $configuration_dest, $params ) = @_;
 
-  if(ref $configuration_source eq "CODE") {
+  my $preview = $ENV{REX_APPLICATION_CONFIGURATION_PREVIEW} // 0;
+
+  if ( ref $configuration_source eq "CODE" ) {
     my $cfg_ret = $configuration_source->($self);
-    if(ref($cfg_ret) =~ m/::/) {
+    if ( ref($cfg_ret) =~ m/::/ ) {
       $configuration_source = $cfg_ret;
     }
     else {
       return $cfg_ret;
     }
   }
-  
-  if(ref $params eq "CODE") {
-    $params = $params->($self, $configuration_source);
+
+  if ( ref $params eq "CODE" ) {
+    $params = $params->( $self, $configuration_source );
   }
   else {
     $params = $self->configuration_template_variables();
@@ -114,19 +117,20 @@ sub configure_app {
 
   my $cfg_o = $configuration_source;
 
-  if(! ref $cfg_o) {
-    my ($cfg_type) = ($configuration_source =~ m|^([^:]+)://|);
-    if($cfg_type) {
+  if ( !ref $cfg_o ) {
+    my ($cfg_type) = ( $configuration_source =~ m|^([^:]+)://| );
+    if ($cfg_type) {
       my $klass = "Application::Configuration::Type::\u$cfg_type";
       eval "use $klass";
-      if($@) {
+      if ($@) {
         confess "Error loading configuration type: $klass.\nError: $@\n";
       }
-      
-      # convert $params to a true hash
-      my %values = %{ $params };
 
-      $cfg_o = $klass->new(source => $configuration_source, parameter => \%values);
+      # convert $params to a true hash
+      my %values = %{$params};
+
+      $cfg_o =
+        $klass->new( source => $configuration_source, parameter => \%values );
     }
     else {
       confess "No configuration type found.";
@@ -137,62 +141,75 @@ sub configure_app {
 
   $configuration_dest ||= "app";
 
-  if(ref $configuration_dest eq "CODE") {
+  if ( ref $configuration_dest eq "CODE" ) {
     $configuration_dest = $configuration_dest->($self);
   }
 
-  if($configuration_dest !~ m/^\//) {
+  if ( $configuration_dest !~ m/^\// ) {
+
     # relative path
     $configuration_dest = "$conf_dest/$configuration_dest";
   }
 
   sudo sub {
-    # ensure that configuration directory exists
-    Rex::Logger::info("Creating: $configuration_dest");
-    file $configuration_dest,
-      ensure => 'directory',
-      owner  => $self->owner,
-      group  => $self->group,
-      mode   => '0755';
+
+    if ( !$preview ) {
+
+      # ensure that configuration directory exists
+      Rex::Logger::info("Creating: $configuration_dest");
+      file $configuration_dest,
+        ensure => 'directory',
+        owner  => $self->owner,
+        group  => $self->group,
+        mode   => '0755';
+    }
 
     my $files = $cfg_o->files;
-    for my $file (@{ $files }) {
+    for my $file ( @{$files} ) {
 
-      my $dest_file = File::Spec->catfile($configuration_dest, $file->name);
+      my $dest_file = File::Spec->catfile( $configuration_dest, $file->name );
 
-      Rex::Logger::info("Uploading configuration file: $dest_file");
-
-      file dirname($dest_file),
-        ensure => "directory",
-        mode   => '0755',
-        owner  => $self->owner,
-        group  => $self->group;
+      Rex::Logger::info("Uploading configuration file: $dest_file")
+        if !$preview;
+      Rex::Logger::info("Preview configuration file: $dest_file") if $preview;
 
       my $content;
-      if($dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties)$/) {
-        $content = template(\$file->content);
+      if (
+        $dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/ )
+      {
+        $content = template( \$file->content );
       }
       else {
         $content = $file->content;
       }
-      
-      file $dest_file,
-        content => $content,
-        mode   => '0664',
-        owner  => $self->owner,
-        group  => $self->group;
+
+      if ( !$preview ) {
+
+        file dirname($dest_file),
+          ensure => "directory",
+          mode   => '0755',
+          owner  => $self->owner,
+          group  => $self->group;
+
+        file $dest_file,
+          content => $content,
+          mode    => '0664',
+          owner   => $self->owner,
+          group   => $self->group;
+
+      }
+      else {
+
+        # only preview
+        print "\n" . $content . "\n";
+      }
     }
   };
 
-
-  #$ENV{tomcat_instance} = substr($self->instance, 1);
-  #my @cluster_members = map { $_->get_servers } Rex::Group->get_group("servers");
-  #cluster_members => join(", ", map { ("$_:15701", "$_:25701") } @cluster_members),
 }
 
-
 sub restart {
-  my ($self, $param) = @_;
+  my ( $self, $param ) = @_;
 
   sudo sub {
     service $self->service_name => "restart";
@@ -200,7 +217,7 @@ sub restart {
 }
 
 sub stop {
-  my ($self, $param) = @_;
+  my ( $self, $param ) = @_;
 
   sudo sub {
     service $self->service_name => "stop";
@@ -208,9 +225,9 @@ sub stop {
 }
 
 sub start {
-  my ($self, $param) = @_;
+  my ( $self, $param ) = @_;
 
-  if( ! service $self->service_name => "status" ) {
+  if ( !service $self->service_name => "status" ) {
     $self->service_start;
   }
 }
@@ -222,24 +239,22 @@ sub service_start {
   };
 }
 
-
 sub wait_for_start {
   my ($self) = @_;
 
 }
 
 sub _comp {
-  my ($self, $other) = @_;
+  my ( $self, $other ) = @_;
 
-  if(! ref $other) { return 0; }
+  if ( !ref $other ) { return 0; }
 
-  return ($self->instance_path eq $other->instance_path); 
+  return ( $self->instance_path eq $other->instance_path );
 }
 
 sub to_s {
   my ($self) = @_;
   return $self->instance;
 }
-
 
 1;
