@@ -9,7 +9,10 @@ require Rex::Commands::Download;
 extends qw(Application::Download::Base);
 
 sub download {
-  my ( $self, $url, $tmp_dir ) = @_;
+  my ( $self, %option ) = @_;
+  
+  my $url = $option{url};
+  my $tmp_dir = $option{to};
   
   my %dl_option = ();
 

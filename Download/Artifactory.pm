@@ -13,7 +13,10 @@ require Rex::Commands;
 extends qw(Application::Download::Base);
 
 sub download {
-  my ($self, $url, $tmp_dir) = @_;
+  my ($self, %option) = @_;
+
+  my $url = $option{url};
+  my $tmp_dir = $option{to};
 
   my $dl_file;
   Rex::Commands::LOCAL {
@@ -35,7 +38,8 @@ sub download {
 
     $url = $_url;
 
-    my ($repository, $package, $version) = ($url =~ m|^artifactory://([^/]+)/(.*)/([^/]+)$|);
+    my $repository = $url->host;
+    my ($package, $version) = ($url->path() =~ m|^(.*)/([^/]+)$|);
     $package =~ s/\//./g;
     my $deploy_file = Artifactory::download {
       repository => $repository,

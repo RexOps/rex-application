@@ -49,7 +49,7 @@ sub get {
   else {
     my $class = "Application::Download::\u$type";
     my $dl    = $class->new;
-    $ret = $dl->download( $url => $tmp_dir );
+    $ret = $dl->download( url => $url, to => $tmp_dir );
 
     if ( exists $option{extract} && $option{extract} ) {
       Rex::Commands::LOCAL(
