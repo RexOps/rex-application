@@ -26,7 +26,7 @@ sub download {
     rmdir $tmp_dir;
     mkdir $tmp_dir;
 
-    my ($_url, $query_string) = split(/\?/, $url);
+    my ($_url, $query_string) = split(/\?/, $url->to_s);
     $query_string ||= "";
 
     my @query_params = split(/\&/, $query_string);
@@ -35,8 +35,6 @@ sub download {
       my ($key, $val) = split(/=/, $qp, 2);
       $q_params{$key} = $val;
     }
-
-    $url = $_url;
 
     my $repository = $url->host;
     my ($package, $version) = ($url->path() =~ m|^(.*)/([^/]+)$|);

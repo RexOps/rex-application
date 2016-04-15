@@ -2,12 +2,7 @@ package Application::Download::URL;
 
 use overload '""' => sub {
   my ($self) = @_;
-  return
-      $self->proto . "://"
-    . ( $self->has_auth ? $self->user . ":" . $self->password . '@' : "" )
-    . $self->host . ":"
-    . $self->port
-    . $self->path;
+  return $self->to_s;
 };
 
 use Moose;
@@ -33,5 +28,17 @@ sub to_s_without_auth {
     . $self->port
     . $self->path;
 }
+
+sub to_s {
+  my $self = shift;
+
+  return
+      $self->proto . "://"
+    . ( $self->has_auth ? $self->user . ":" . $self->password . '@' : "" )
+    . $self->host . ":"
+    . $self->port
+    . $self->path;
+}
+
 
 1;
