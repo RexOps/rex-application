@@ -22,9 +22,9 @@ sub download {
     rmdir $tmp_dir;
     mkdir $tmp_dir;
 
-    Rex::Commands::Fs::cp($url->to_s, "$tmp_dir/" . File::Basename::basename($url->to_s));
+    Rex::Commands::Fs::cp($local_path, "$tmp_dir/" . File::Basename::basename($local_path));
 
-    my $deploy_file = File::Basename::basename($url->to_s);
+    my $deploy_file = File::Basename::basename($local_path);
 
     $dl_file = "$tmp_dir/$deploy_file";
   };
