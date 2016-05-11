@@ -184,6 +184,8 @@ sub configure_app {
       }
 
       if ( !$preview ) {
+        
+        my %source_content = ( ref $content eq "SCALAR" ? ( source => ${ $content }) : ( content => $content ) );
 
         file dirname($dest_file),
           ensure => "directory",
@@ -192,16 +194,16 @@ sub configure_app {
           group  => $self->group;
 
         file $dest_file,
-          content => $content,
           mode    => '0664',
           owner   => $self->owner,
-          group   => $self->group;
+          group   => $self->group,
+          %source_content;
 
       }
       else {
 
         # only preview
-        print "\n" . $content . "\n";
+        print "\n" . ( ref $content ? "Upload file: " . ${ $content } : $content ) . "\n";
       }
     }
   };

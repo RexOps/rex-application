@@ -41,7 +41,14 @@ has content => (
       $parameter = $parameter->();
     }
 
-    return template($self->lookup_path, $parameter);
+    if (
+      $self->name() =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/ )
+    {
+      return template($self->lookup_path, $parameter);
+    }
+    else {
+      return \$self->lookup_path;
+    }
   },
 );
 
