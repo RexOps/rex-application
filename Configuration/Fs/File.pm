@@ -42,7 +42,7 @@ has content => (
     }
 
     if (
-      $self->name() =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/ )
+      $self->lookup_path() =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/ && -s $self->lookup_path() )
     {
       return template($self->lookup_path, $parameter);
     }
