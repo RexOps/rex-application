@@ -175,7 +175,7 @@ sub configure_app {
 
       my $content;
       if (
-        $dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/ )
+        $dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/ && -s $file->lookup_path )
       {
         $content = template( \$file->content );
       }
