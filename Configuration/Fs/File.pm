@@ -32,7 +32,7 @@ has configuration => (
 
 has content => (
   is => 'ro',
-  isa => 'Str',
+  isa => 'Str | ScalarRef',
   lazy    => 1,
   default => sub {
     my ($self) = @_;
