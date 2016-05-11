@@ -55,6 +55,7 @@ sub get {
       Rex::Commands::LOCAL(
         sub {
           my $basename = basename($ret);
+          $basename =~ s/[^a-zA-Z_0-9]/_/g;
           mkdir "$tmp_dir/extract_$basename";
           extract(
             File::Spec->catfile( getcwd(), $ret ),
