@@ -39,6 +39,8 @@ sub download {
     my $repository = $url->host;
     my ($package, $version) = ($url->path() =~ m|^(.*)/([^/]+)$|);
     $package =~ s/\//./g;
+    $version =~ s/\?.*$//;
+
     my $deploy_file = Artifactory::download {
       repository => $repository,
       package    => $package,
