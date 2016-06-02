@@ -111,7 +111,7 @@ override deploy_app => sub {
 
 override activate => sub {
   my ($self) = @_;
-  run "ln -snf " . $self->deploy_directory . " " . $self->doc_root;
+  sudo sub { run "ln -snf " . $self->deploy_directory . " " . $self->doc_root; };
   $self->restart();
 };
 
