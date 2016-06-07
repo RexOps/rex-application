@@ -16,7 +16,6 @@ use Rex::Commands::Fs;
 use Rex::Commands::Service;
 require Rex::Commands;
 
-use Artifactory;
 use Array::Diff;
 
 use overload
@@ -57,7 +56,7 @@ has configuration_path => (
   lazy    => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir( $self->instance_path, "conf" );
+    return File::Spec->catdir( $self->instance_path, $self->app->project->defaults->{deploy_configuration_directory} );
   }
 );
 
@@ -139,7 +138,7 @@ sub configure_app {
 
   my $conf_dest = $self->configuration_path;
 
-  $configuration_dest ||= "app";
+  $configuration_dest ||= $self->app->project->defaults->{configuration_path} || $self->app->project->defaults->{configuration_directory} || "app";
 
   if ( ref $configuration_dest eq "CODE" ) {
     $configuration_dest = $configuration_dest->($self);

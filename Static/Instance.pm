@@ -7,25 +7,26 @@ package Application::Static::Instance;
 
 use Moose;
 
-use Rex::Apache::Deploy qw/Symlink/;
 use File::Spec;
 use Data::Dumper;
 use Rex::Commands::Run;
 use Rex::Commands::Fs;
 use Rex::Commands::File;
 use Rex::Commands::Service;
-
+use Rex::Commands::Upload;
+use File::Basename 'basename', 'dirname';
 
 extends qw(Application::Instance);
 
 has stash_directory => (
   is => 'ro',
+  lazy => 1,
   writer => '_set_stash_directory',
   trigger => sub {
     my ($self) = @_;
     $self->_clear_deploy_directory;
   },
-  default => sub { "deploy" },
+  default => sub { shift->app->project->defaults->{deploy_stash_directory} },
 );
 
 has deploy_directory => (
@@ -46,7 +47,17 @@ has deploy_version => (
     $self->_clear_deploy_directory;
   },
   default => sub {
-    return $ENV{version};
+    my $self = shift;
+    return $self->app->project->defaults->{deploy_version} || $ENV{version} || $self->app->project->deploy_start_time;
+  },
+);
+
+has data_directory => (
+  is => 'ro',
+  lazy => 1,
+  default => sub {
+    my ($self) = @_;
+    return $self->app->project->defaults->{data_path} || File::Spec->catdir($self->instance_path, $self->app->project->defaults->{data_directory});
   },
 );
 
@@ -55,7 +66,7 @@ has doc_root => (
   lazy => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "app");
+    return $self->app->project->defaults->{document_root_path} || File::Spec->catdir($self->instance_path, $self->app->project->defaults->{document_root_directory});
   },
 );
 
@@ -88,30 +99,41 @@ override deploy_app => sub {
   if (!can_run "unzip") {
     die('unzip command not found.');
   }
+  
+  my $deploy_to = File::Spec->catdir($self->instance_path, $self->stash_directory, $self->deploy_version);
 
-  deploy_to(File::Spec->catdir($self->instance_path, $self->stash_directory));
-  document_root($self->doc_root);
-
-  generate_deploy_directory(sub { return $self->deploy_version });
-
-  my $file = $self->app->download($tar_gz);
   sudo sub {
-    deploy $file;
+    file $deploy_to,
+      ensure => "directory",
+      owner => $self->owner,
+      group => $self->group,
+      mode  => "0755"; 
   };
 
-  sudo sub {
-    chown $self->owner, $self->deploy_directory,
-      recursive => 1;
+  my $file = $self->app->download($tar_gz);
 
-    chgrp $self->group, $self->deploy_directory,
-      recursive => 1;
+  sudo sub {
+    upload $file, "/tmp/" . basename($file);
+    extract "/tmp/" . basename($file),
+      to    => $deploy_to,
+      owner => $self->owner,
+      group => $self->group;
+    unlink "/tmp/" . basename($file);
   };
 
 };
 
 override activate => sub {
   my ($self) = @_;
-  run "ln -snf " . $self->deploy_directory . " " . $self->doc_root;
+  sudo sub {
+    file dirname($self->doc_root),
+      ensure => "directory",
+      owner  => $self->owner,
+      group  => $self->group,
+      mode   => "0755";
+
+    run "ln -snf " . $self->deploy_directory . " " . $self->doc_root;
+  };
   $self->restart();
 };
 

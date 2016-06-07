@@ -13,7 +13,6 @@ use File::Spec;
 use XML::Simple;
 use Time::Local;
 
-use Rex::Apache::Deploy qw/Tomcat7/;
 use Rex::Commands::File;
 use Rex::Commands::Run;
 use Rex::Commands::Fs;
@@ -23,12 +22,11 @@ use Rex::Commands::Process;
 use Rex::Commands::Tail;
 use Rex::Commands::Upload;
 
+use LWP::UserAgent;
+
 use File::Basename qw/basename/;
 
 require Rex::Commands;
-
-use Apptest::UserAgent;
-use Artifactory;
 
 extends qw(Application::Instance);
 
@@ -40,7 +38,7 @@ has manager_user     => (
     my $content = cat(File::Spec->catfile($self->instance_path, "conf", "tomcat-users.xml"));
     my $ref = XMLin($content, Force_Array => 1);
     my ($manager_user) = grep { $_->{roles} =~ m/manager\-script/ } @{ $ref->{user} };
-    return $manager_user->{username};
+    return $self->app->project->defaults->{manager_username} || $manager_user->{username};
   },
 );
 
@@ -52,7 +50,7 @@ has manager_password => (
     my $content = cat(File::Spec->catfile($self->instance_path, "conf", "tomcat-users.xml"));
     my $ref = XMLin($content, Force_Array => 1);
     my ($manager_pw) = grep { $_->{roles} =~ m/manager\-script/ } @{ $ref->{user} };
-    return $manager_pw->{password};
+    return $self->app->project->defaults->{manager_password} || $manager_pw->{password};
   },
 );
 
@@ -60,6 +58,8 @@ has owner => (
   is => "ro",
   lazy => 1,
   default => sub {
+    my ($self) = @_;
+    return $self->app->project->defaults->{tomcat_username} if $self->app->project->defaults->{tomcat_username};
     for my $u (qw/tomcat tomcat7 tomcat8/) {
       run "id $u";
       if($? == 0) { return $u; }
@@ -71,6 +71,8 @@ has group => (
   is => "ro",
   lazy => 1, 
   default => sub {
+    my ($self) = @_;
+    return $self->app->project->defaults->{tomcat_groupname} if $self->app->project->defaults->{tomcat_groupname};
     for my $u (qw/tomcat tomcat7 tomcat8/) {
       run "id $u";
       if($? == 0) { return $u; }
@@ -83,6 +85,7 @@ has port => (
   lazy    => 1,
   default => sub {
     my ($self) = @_;
+    return $self->app->project->defaults->{tomcat_port} if $self->app->project->defaults->{tomcat_port};
     my $port;
     sudo sub {
       my $wrapper_conf = File::Spec->catfile($self->instance_path, "conf", "wrapper.conf.d", "java.additional.conf");
@@ -94,7 +97,7 @@ has port => (
       my ($http_port_line) = grep { m/\-Dtomcat\.http\.port=/ } @lines;
       ($port) = ( $http_port_line =~ m/=(\d+)$/ );
     };
-    return $port;
+    return $port || die "Tomcat port not found. Please provide one.";
   }
 );
 
@@ -153,22 +156,62 @@ override deploy_app => sub {
   my $tmp_dir;
 
   $war = $self->app->download($war);
-
   if( ! -f $war ) {
     die "File $war not found.";
   }
 
-  deploy $war,
-    username     => $self->manager_user,
-    password     => $self->manager_password,
-    port         => $self->port,
-    context_path => $context;
+  my $size = -s $war;
+  Rex::Logger::info("Uploading " . basename($war) . " to server. Size: " . ( sprintf("%.2f", $size / 1024 / 1024) ) . " MB");
 
+  sudo sub {
+    file "/tmp/" . basename($war),
+      source => $war,
+      mode   => '0644',
+      owner  => $self->owner,
+      group  => $self->group;
+  };
+  
+  my $ua = LWP::UserAgent->new;
+  my $manager_path = $self->app->project->defaults->{manager_path};
+  $manager_path =~ s/^\///; # remove leading slash
+  $manager_path =~ s/\/$//; # remove trailing slash
+
+  my $url = "http://" . $self->manager_user . ":" . $self->manager_password 
+            . '@' . Rex::Commands::connection()->server . ":" . $self->port 
+            . "/$manager_path/text/deploy?path=" . $context 
+            . '&war=file:/tmp/' . basename($war) 
+            . '&update=true';
+            
+  my $log_url = "http://" . $self->manager_user . ":" . '***************' 
+            . '@' . Rex::Commands::connection()->server . ":" . $self->port 
+            . "/$manager_path/text/deploy?path=" . $context 
+            . '&war=file:/tmp/' . basename($war) 
+            . '&update=true';
+  
+  Rex::Logger::info("Deploying via GET: $log_url...");
+  
+  my $resp = $ua->get($url);
+  if ( $resp->is_success ) {
+    my $c = $resp->decoded_content;
+    if ( $c =~ m/FAIL/gmi ) {
+      die( $resp->decoded_content );
+    }
+    else {
+      Rex::Logger::info( $resp->decoded_content );
+    }
+  }
+  else {
+    die( "FAILURE: $url: " . $resp->status_line );
+  }
+  
+  sudo sub { unlink "/tmp/" . basename($war); };
 };
 
 
 override detect_service_name => sub {
   my ($self) = @_;
+  
+  return $self->app->project->defaults->{service_name} if $self->app->project->defaults->{service_name};
 
   if(can_run "systemctl") {
     my $sysctl_out = run "systemctl | grep tomcat-" . $self->instance;

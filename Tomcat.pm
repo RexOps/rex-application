@@ -14,6 +14,8 @@ use Rex::Commands::Run;
 
 use Application::Tomcat::Instance;
 
+use File::Basename 'basename', 'dirname';
+
 extends qw(Application::Base);
 
 has name => (is => 'ro', isa => 'Str', default => sub {''});
@@ -30,6 +32,17 @@ override get_instances => sub {
   }
 
   my $app_name = $self->name;
+  
+  if($self->project->defaults->{deploy_path} || $self->project->defaults->{tomcat_path}) {
+    my $_path = $self->project->defaults->{deploy_path} || $self->project->defaults->{tomcat_path};
+    return (
+      $instance_class->new(
+        app           => $self,
+        instance      => basename($_path),
+        instance_path => $_path)
+    );
+  }
+  # else {
 
   my @tomcats = grep { $app_name ? m/^\Q$app_name\E\d+/ : 1 }
   grep {
@@ -49,7 +62,6 @@ override get_instances => sub {
 
   return @ret;
 };
-
 
 Project->register_app_type(100, __PACKAGE__, sub {
   my @tomcat_out = run "rpm -qa | grep tomcat";
