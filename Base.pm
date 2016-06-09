@@ -83,10 +83,7 @@ sub switch {
     }
 
     if( $self->project->has_httpd ) {
-      if( ! service httpd => "switch") {
-        # switch returned error code, so restart
-        service httpd => "restart";
-      }
+      service httpd => "switch";
     }
   };
 }
