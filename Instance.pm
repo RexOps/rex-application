@@ -56,7 +56,8 @@ has configuration_path => (
   lazy    => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir( $self->instance_path, $self->app->project->defaults->{deploy_configuration_directory} );
+    return File::Spec->catdir( $self->instance_path,
+      $self->app->project->defaults->{deploy_configuration_directory} );
   }
 );
 
@@ -145,14 +146,16 @@ sub configure_app {
 
   my $conf_dest = $self->configuration_path;
 
-  $configuration_dest ||= $self->app->project->defaults->{configuration_path} || $self->app->project->defaults->{configuration_directory} || "app";
+  $configuration_dest ||=
+       $self->app->project->defaults->{configuration_path}
+    || $self->app->project->defaults->{configuration_directory}
+    || "app";
 
   if ( ref $configuration_dest eq "CODE" ) {
     $configuration_dest = $configuration_dest->($self);
   }
 
   if ( $configuration_dest !~ m/^\// ) {
-
     # relative path
     $configuration_dest = "$conf_dest/$configuration_dest";
   }
@@ -181,9 +184,11 @@ sub configure_app {
 
       my $content;
       if (
-        $dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/ && -s $file->lookup_path )
+        $dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/
+        && length( $file->content ) != 0 )
       {
-        $content = template( \$file->content );
+        $content = template( \$file->content,
+          $self->app->project->configuration_template_variables );
       }
       else {
         $content = $file->content;
@@ -194,8 +199,7 @@ sub configure_app {
         my %source_content = (
           ref $content eq "SCALAR"
           ? ( source => ${$content} )
-          : ( content => $content )
-        );
+          : ( content => $content ) );
 
         file dirname($dest_file),
           ensure => "directory",
@@ -204,16 +208,17 @@ sub configure_app {
           group  => $self->group;
 
         file $dest_file,
-          mode    => '0664',
-          owner   => $self->owner,
-          group   => $self->group,
+          mode  => '0664',
+          owner => $self->owner,
+          group => $self->group,
           %source_content;
 
       }
       else {
 
         # only preview
-        print "\n" . ( ref $content ? "Upload file: " . ${ $content } : $content ) . "\n";
+        print "\n"
+          . ( ref $content ? "Upload file: " . ${$content} : $content ) . "\n";
       }
     }
   };
@@ -267,7 +272,8 @@ sub _comp {
 sub to_s {
   my ($self) = @_;
 
-  die "Instance has no name. (use 'instance' attribute)" if(! $self->instance );
+  die "Instance has no name. (use 'instance' attribute)"
+    if ( !$self->instance );
   return $self->instance;
 }
 
