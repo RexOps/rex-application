@@ -522,6 +522,7 @@ sub wait_for_start {
         my $log_file = $self->logfile;
         tail $log_file, sub {
             my ($data) = @_;
+            chomp $data;
 
             Rex::Logger::info($data);
 
