@@ -16,7 +16,6 @@ use Rex::Commands::Fs;
 use Rex::Commands::Service;
 require Rex::Commands;
 
-use Artifactory;
 use Array::Diff;
 
 use overload
@@ -57,7 +56,7 @@ has configuration_path => (
   lazy    => 1,
   default => sub {
     my ($self) = @_;
-    return File::Spec->catdir( $self->instance_path, "conf" );
+    return File::Spec->catdir( $self->instance_path, $self->app->project->defaults->{deploy_configuration_directory} );
   }
 );
 
@@ -68,6 +67,13 @@ has configuration_template_variables => (
     my ($self) = @_;
     return $self->app->project->configuration_template_variables();
   },
+);
+
+has port => (
+  is      => 'ro',
+  isa     => 'Int',
+  lazy    => 1,
+  default => sub { 80 },
 );
 
 sub activate {
@@ -139,7 +145,7 @@ sub configure_app {
 
   my $conf_dest = $self->configuration_path;
 
-  $configuration_dest ||= "app";
+  $configuration_dest ||= $self->app->project->defaults->{configuration_path} || $self->app->project->defaults->{configuration_directory} || "app";
 
   if ( ref $configuration_dest eq "CODE" ) {
     $configuration_dest = $configuration_dest->($self);
@@ -184,8 +190,12 @@ sub configure_app {
       }
 
       if ( !$preview ) {
-        
-        my %source_content = ( ref $content eq "SCALAR" ? ( source => ${ $content }) : ( content => $content ) );
+
+        my %source_content = (
+          ref $content eq "SCALAR"
+          ? ( source => ${$content} )
+          : ( content => $content )
+        );
 
         file dirname($dest_file),
           ensure => "directory",

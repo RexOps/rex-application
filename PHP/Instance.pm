@@ -19,14 +19,4 @@ use Rex::Commands::Service;
 
 extends qw(Application::Static::Instance);
 
-has data_directory => (
-  is => 'ro',
-  lazy => 1,
-  default => sub {
-    my ($self) = @_;
-    return File::Spec->catdir($self->instance_path, "shared");
-  },
-);
-
-
 1;

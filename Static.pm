@@ -27,10 +27,17 @@ override get_instances => sub {
   return ($instance_class->new(
     app => $self,
     instance => $self->project->vhost,
-    instance_path => File::Spec->catdir($self->project->project_path, "www", $self->project->vhost),
+    instance_path => File::Spec->catdir($self->project->defaults->{deploy_path} || $self->project->defaults->{instance_path}),
   ));
 
 };
+
+override switch => sub {
+  my ($self) = @_;
+  my $inactive = $self->get_deployable_instance;
+  $inactive->activate;
+};
+
 
 Project->register_app_type(1000, __PACKAGE__, sub {
   my @httpd_out = run "rpm -qa | grep httpd";

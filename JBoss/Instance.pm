@@ -18,8 +18,6 @@ use Rex::Commands::Service;
 
 require Rex::Commands;
 
-use Artifactory;
-
 BEGIN {
   use Rex::Shared::Var;
   share qw($download_count $deploy_file);

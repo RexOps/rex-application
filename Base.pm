@@ -28,6 +28,7 @@ has post_migration => (
 
 sub download {
   my ($self, $url) = @_;
+  if(-f $url) { return $url; }
   return Application::Download::get($url);
 }
 
@@ -80,13 +81,6 @@ sub switch {
 
     if($active) {
       $active->deactivate;
-    }
-
-    if( $self->project->has_httpd ) {
-      if( ! service httpd => "switch") {
-        # switch returned error code, so restart
-        service httpd => "restart";
-      }
     }
   };
 }

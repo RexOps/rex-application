@@ -54,7 +54,7 @@ override detect_service_name => sub {
 
 override activate => sub {
   my ($self) = @_;
-  run "ln -snf " . File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version, "public") . " " . $self->doc_root;
+  sudo sub { run "ln -snf " . File::Spec->catdir($self->instance_path, "deploy", $self->deploy_version, "public") . " " . $self->doc_root; };
   $self->restart();
 };
 
