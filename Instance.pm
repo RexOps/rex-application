@@ -70,6 +70,13 @@ has configuration_template_variables => (
   },
 );
 
+has port => (
+  is      => 'ro',
+  isa     => 'Int',
+  lazy    => 1,
+  default => sub { 80 },
+);
+
 sub activate {
   my ($self) = @_;
   sudo sub {
@@ -149,6 +156,7 @@ sub configure_app {
   }
 
   if ( $configuration_dest !~ m/^\// ) {
+
     # relative path
     $configuration_dest = "$conf_dest/$configuration_dest";
   }
@@ -192,7 +200,8 @@ sub configure_app {
         my %source_content = (
           ref $content eq "SCALAR"
           ? ( source => ${$content} )
-          : ( content => $content ) );
+          : ( content => $content )
+        );
 
         file dirname($dest_file),
           ensure => "directory",

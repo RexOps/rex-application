@@ -119,9 +119,7 @@ has has_wait_for_start => (
     },
 );
 
-has port => (
-    is      => "ro",
-    lazy    => 1,
+has '+port' => (
     default => sub {
         my ($self) = @_;
         return $self->app->project->defaults->{tomcat_port}
