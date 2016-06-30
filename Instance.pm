@@ -156,6 +156,7 @@ sub configure_app {
   }
 
   if ( $configuration_dest !~ m/^\// ) {
+
     # relative path
     $configuration_dest = "$conf_dest/$configuration_dest";
   }
@@ -184,8 +185,10 @@ sub configure_app {
 
       my $content;
       if (
-        $dest_file =~ m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml)$/
-        && length( $file->content ) != 0 )
+        $dest_file =~
+        m/\.(txt|conf|ini|json|yaml|yml|config|properties|xml|php)$/
+        && length( $file->content ) != 0
+        )
       {
         $content = template( \$file->content,
           $self->app->project->configuration_template_variables );
@@ -199,7 +202,8 @@ sub configure_app {
         my %source_content = (
           ref $content eq "SCALAR"
           ? ( source => ${$content} )
-          : ( content => $content ) );
+          : ( content => $content )
+        );
 
         file dirname($dest_file),
           ensure => "directory",
