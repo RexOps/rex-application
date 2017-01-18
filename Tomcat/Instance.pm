@@ -34,12 +34,7 @@ has deploy_timeout => (
     is      => "ro",
     lazy    => 1,
     default => sub {
-      my ($self) = @_;
-      if ( length $ENV{deploy_timeout} ) {
-        return $ENV{deploy_timeout};
-      } else {
-        return 180;
-      }
+      $ENV{deploy_timeout} // 180;
     },
 );
 
