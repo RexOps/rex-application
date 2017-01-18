@@ -30,6 +30,14 @@ require Rex::Commands;
 
 extends qw(Application::Instance);
 
+has deploy_timeout => (
+    is      => "ro",
+    lazy    => 1,
+    default => sub {
+      $ENV{deploy_timeout} // 180;
+    },
+);
+
 has manager_user => (
     is      => "ro",
     lazy    => 1,
@@ -220,6 +228,7 @@ override deploy_app => sub {
     };
 
     my $ua           = LWP::UserAgent->new;
+    $ua->timeout($self->deploy_timeout);
     my $manager_path = $self->app->defaults->{manager_path};
     $manager_path =~ s/^\///;    # remove leading slash
     $manager_path =~ s/\/$//;    # remove trailing slash
