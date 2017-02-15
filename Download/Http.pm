@@ -3,6 +3,7 @@ package Application::Download::Http;
 use Moose;
 use File::Basename;
 use Carp;
+use Rex::Commands::Run;
 require Rex::Commands;
 require Rex::Commands::Download;
 use LWP::UserAgent;
@@ -30,27 +31,10 @@ sub download {
     my $deploy_file = File::Basename::basename($url);
     $dl_file = "$tmp_dir/$deploy_file";
 
-    my $ua = LWP::UserAgent->new;
-    if($ENV{http_proxy} || $ENV{https_proxy}) {
-      Rex::Logger::info("Loading http proxy settings from environment:");
-      Rex::Logger::info("http_proxy = " . ($ENV{http_proxy} || ''));
-      Rex::Logger::info("https_proxy = " . ($ENV{https_proxy} || ''));
-      $ua->env_proxy;
-    }
-
-    open(my $fh, ">", $dl_file) or die("Error opening file to write ($dl_file): $!");
-    my $response = $ua->get(
-      $url->to_s,
-      ':content_cb' => sub {
-        my ( $data, $response, $protocol ) = @_;
-        print $fh $data;
-      }
-    );
-    close $fh;
-
-    if ( !$response->is_success ) {
+    my $out = run "wget -O $dl_file " . $url->to_s . " 2>&1";
+    if($? != 0) {
       unlink $dl_file;
-      die "Error downloading file from server.\nStatus: " . $response->status_line;
+      die "Error downloading file from server.\n" . $url->to_s . "\nERROR:\n$out\n";
     }
     
     return $dl_file;
