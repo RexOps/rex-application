@@ -24,7 +24,7 @@ has owner => (
   lazy => 1,
   default => sub {
     my ($self) = @_;
-    my $php_fpm_config = "/etc/php-fpm.d/" . $self->app->project->vhost . ".conf";
+    my $php_fpm_config = "/etc/php-fpm.d/" . $self->app->vhost . ".conf";
     if(is_file($php_fpm_config)) {
       my ($user_line) = grep { m/^user =/ } split(/\n/, cat $php_fpm_config);
       my ($null, $user) = split(/ = /, $user_line);
@@ -38,7 +38,7 @@ has group => (
   lazy => 1, 
   default => sub {
     my ($self) = @_;
-    my $php_fpm_config = "/etc/php-fpm.d/" . $self->app->project->vhost . ".conf";
+    my $php_fpm_config = "/etc/php-fpm.d/" . $self->app->vhost . ".conf";
     if(is_file($php_fpm_config)) {
       my ($group_line) = grep { m/^group =/ } split(/\n/, cat $php_fpm_config);
       my ($null, $group) = split(/ = /, $group_line);
